@@ -306,6 +306,19 @@ def status():
         "uazapi": get_instance_status()
     })
 
+@app.route("/test-claude", methods=["GET"])
+def test_claude():
+    """Testa a Claude API diretamente."""
+    try:
+        r = claude.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=30,
+            messages=[{"role": "user", "content": "diga só: ok"}]
+        )
+        return jsonify({"ok": True, "reply": r.content[0].text, "key_prefix": ANTHROPIC_API_KEY[:20]})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e), "key_prefix": ANTHROPIC_API_KEY[:20]})
+
 @app.route("/test-send", methods=["POST"])
 def test_send():
     """Testa envio direto via UazAPI — debug."""
