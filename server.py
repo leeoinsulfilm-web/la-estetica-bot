@@ -325,16 +325,35 @@ def status():
 
 @app.route("/test-claude", methods=["GET"])
 def test_claude():
-    """Testa a Claude API diretamente."""
+    """Testa Claude API + conectividade de rede."""
+    result = {"key_prefix": ANTHROPIC_API_KEY[:20]}
+
+    # 1. Teste de rede raw via requests
     try:
-        r = claude.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=30,
-            messages=[{"role": "user", "content": "diga só: ok"}]
+        r = requests.get(
+            "https://api.anthropic.com/v1/models",
+            headers={"x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01"},
+            timeout=20
         )
-        return jsonify({"ok": True, "reply": r.content[0].text, "key_prefix": ANTHROPIC_API_KEY[:20]})
+        result["http_status"] = r.status_code
+        result["http_ok"] = r.ok
     except Exception as e:
-        return jsonify({"ok": False, "error": str(e), "key_prefix": ANTHROPIC_API_KEY[:20]})
+        result["http_error"] = str(e)
+
+    # 2. Teste via SDK
+    try:
+        resp = claude.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=20,
+            messages=[{"role": "user", "content": "ok"}]
+        )
+        result["sdk_ok"] = True
+        result["reply"] = resp.content[0].text
+    except Exception as e:
+        result["sdk_ok"] = False
+        result["sdk_error"] = str(e)
+
+    return jsonify(result)
 
 @app.route("/test-send", methods=["POST"])
 def test_send():
