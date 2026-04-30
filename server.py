@@ -62,9 +62,13 @@ def load_system_prompt() -> str:
 SYSTEM_PROMPT = load_system_prompt()
 
 # ──────────────────────────────────────────────
-# CLAUDE CLIENT
+# CLAUDE CLIENT — com retry automático
 # ──────────────────────────────────────────────
-claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+claude = anthropic.Anthropic(
+    api_key=ANTHROPIC_API_KEY,
+    max_retries=3,
+    timeout=60.0,
+)
 
 # ──────────────────────────────────────────────
 # HISTÓRICO DE CONVERSAS (em memória, thread-safe)
@@ -210,18 +214,31 @@ def parse_webhook(body: dict) -> dict | None:
     is_group     = False
     contact_name = ""
 
-    # Formato uAZAPIGO GO principal
-    go_msg = body.get("message")
-    if isinstance(go_msg, dict):
-        phone        = str(go_msg.get("chatid") or go_msg.get("sender") or "")
-        contact_name = str(go_msg.get("senderName") or go_msg.get("pushName") or "")
-        from_me      = bool(go_msg.get("fromMe", False))
-        text         = str(go_msg.get("body") or go_msg.get("text") or "")
-        msg_type     = str(go_msg.get("type") or "")
-        if msg_type in ("audio", "ptt", "image", "video", "document", "sticker"):
-            return None
+    # ── Formato uAZAPIGO GO nativo (BaseUrl + EventType + message) ──
+    if body.get("BaseUrl") or body.get("EventType"):
+        go_msg = body.get("message") or {}
+        if isinstance(go_msg, dict):
+            phone        = str(go_msg.get("chatid") or go_msg.get("sender") or "")
+            contact_name = str(go_msg.get("senderName") or go_msg.get("pushName") or "")
+            from_me      = bool(go_msg.get("fromMe", False))
+            text         = str(go_msg.get("body") or go_msg.get("text") or "")
+            msg_type     = str(go_msg.get("type") or "")
+            if msg_type in ("audio", "ptt", "image", "video", "document", "sticker"):
+                return None
 
-    # Formato plano (fallback)
+    # ── Formato uAZAPIGO GO alternativo (message na raiz) ──
+    if not phone:
+        go_msg = body.get("message")
+        if isinstance(go_msg, dict):
+            phone        = str(go_msg.get("chatid") or go_msg.get("sender") or "")
+            contact_name = str(go_msg.get("senderName") or go_msg.get("pushName") or "")
+            from_me      = bool(go_msg.get("fromMe", False))
+            text         = str(go_msg.get("body") or go_msg.get("text") or "")
+            msg_type     = str(go_msg.get("type") or "")
+            if msg_type in ("audio", "ptt", "image", "video", "document", "sticker"):
+                return None
+
+    # ── Formato plano ──
     if not phone and body.get("phone"):
         phone        = str(body.get("phone") or "")
         contact_name = str(body.get("pushName") or body.get("name") or "")
@@ -229,7 +246,7 @@ def parse_webhook(body: dict) -> dict | None:
         from_me      = bool(body.get("fromMe", False))
         is_group     = bool(body.get("isGroup") or body.get("isGroupMsg", False))
 
-    # Formato Evolution API
+    # ── Formato Evolution API ──
     if not phone:
         data = body.get("data") or body
         key  = data.get("key") if isinstance(data, dict) else None
