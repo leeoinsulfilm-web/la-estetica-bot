@@ -275,10 +275,11 @@ def index():
 @app.route("/webhook", methods=["POST"])
 def webhook():
     body   = request.get_json(silent=True) or {}
-    log(f"WEBHOOK: {json.dumps(body)[:300]}")
+    log(f"WEBHOOK_RAW: {json.dumps(body)[:800]}")
 
     parsed = parse_webhook(body)
     if not parsed:
+        log(f"WEBHOOK_IGNORADO (parse=None) keys={list(body.keys())}")
         return jsonify({"received": True})
 
     phone = parsed["phone"]
