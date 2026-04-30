@@ -305,6 +305,15 @@ def status():
         "uazapi": get_instance_status()
     })
 
+@app.route("/test-send", methods=["POST"])
+def test_send():
+    """Testa envio direto via UazAPI — debug."""
+    data   = request.get_json(silent=True) or {}
+    number = data.get("number", WHATSAPP_NUMBER)
+    text   = data.get("text", "teste de envio do Lucas 🚗")
+    ok     = send_message(number, text, delay_ms=500)
+    return jsonify({"sent": ok, "number": number, "token_ok": bool(UAZAPI_TOKEN)})
+
 @app.route("/setup-webhook", methods=["POST"])
 def setup_webhook():
     data = request.get_json(silent=True) or {}
