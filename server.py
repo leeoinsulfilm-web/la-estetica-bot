@@ -21,7 +21,7 @@ try:
 except ImportError:
     pass
 
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").replace("\n", "").replace("\r", "").strip()
 UAZAPI_SERVER_URL = os.environ.get("UAZAPI_SERVER_URL", "https://strongtime.uazapi.com")
 UAZAPI_TOKEN      = os.environ.get("UAZAPI_TOKEN", "")
 UAZAPI_INSTANCE   = os.environ.get("UAZAPI_INSTANCE", "la-estetica")
